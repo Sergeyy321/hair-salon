@@ -28,7 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientsRoutes);
 
 app.listen(port, () => {
-  process.stdout.write(`Lumé server running on port ${port}\n`);
+  process.stdout.write(` server running on port ${port}\n`);
 });
 
 export default app;
