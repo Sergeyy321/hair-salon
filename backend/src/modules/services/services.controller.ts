@@ -1,31 +1,30 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { ServicesService } from './services.service';
+import { AppError } from '../../errors/appError';
 
 export class ServicesController {
-  static async getAll(_req: Request, res: Response): Promise<void> {
+  static async getAll(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const services = await ServicesService.getAll();
       res.json(services);
-    } catch {
-      res.status(500).json({ error: 'FAILED_TO_FETCH_SERVICES' });
+    } catch (err: unknown) {
+      next(err);
     }
   }
 
-  static async getById(req: Request, res: Response): Promise<void> {
+  static async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = req.params['id'];
       if (typeof id !== 'string') {
-        res.status(400).json({ error: 'INVALID_SERVICE_ID' });
-        return;
+        throw new AppError(400, 'INVALID_SERVICE_ID');
       }
       const service = await ServicesService.getById(id);
       if (!service) {
-        res.status(404).json({ error: 'SERVICE_NOT_FOUND' });
-        return;
+        throw new AppError(404, 'SERVICE_NOT_FOUND');
       }
       res.json(service);
-    } catch {
-      res.status(500).json({ error: 'FAILED_TO_FETCH_SERVICE' });
+    } catch (err: unknown) {
+      next(err);
     }
   }
 }

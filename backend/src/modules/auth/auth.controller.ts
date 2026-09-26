@@ -1,26 +1,51 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/prisma';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
+import {
+  isSuperadminEmail,
+  DEFAULT_DIRECTOR_AVATAR,
+  DEFAULT_CLIENT_AVATAR,
+  DEFAULT_DIRECTOR_NAME,
+  DEFAULT_CLIENT_NAME,
+} from '../../constants/defaults';
 
 const syncSchema = z.object({
   logtoSub: z.string().min(1),
-  email: z.string().optional().nullable().transform((val) => (val && val.trim().length > 0 ? val.trim().toLowerCase() : undefined)),
-  name: z.string().optional().nullable().transform((val) => (val && val.trim().length > 0 ? val.trim() : undefined)),
-  picture: z.string().optional().nullable().transform((val) => (val && val.trim().length > 0 ? val.trim() : undefined)),
+  email: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val && val.trim().length > 0 ? val.trim().toLowerCase() : undefined)),
+  name: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val && val.trim().length > 0 ? val.trim() : undefined)),
+  picture: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val && val.trim().length > 0 ? val.trim() : undefined)),
   role: z.enum(['CLIENT', 'BARBER', 'ADMIN', 'SALON_DIRECTOR']).optional(),
 });
 
 export class AuthController {
-  static async sync(req: Request, res: Response): Promise<void> {
+  static async sync(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const data = syncSchema.parse(req.body);
       const email = data.email || `${data.logtoSub}@client.local`;
 
-      const isDirector = email === 'borawiy457@kingdais.com';
+      const isDirector = isSuperadminEmail(data.email);
       const defaultRole: Role = isDirector ? 'SALON_DIRECTOR' : 'CLIENT';
 
-      const updateData: { name?: string; avatarUrl?: string; email?: string; role?: Role; specialization?: string | null } = {};
+      const updateData: {
+        name?: string;
+        avatarUrl?: string;
+        email?: string;
+        role?: Role;
+        specialization?: string | null;
+      } = {};
       if (data.name) {
         updateData.name = data.name;
       }
@@ -35,7 +60,12 @@ export class AuthController {
         where: { logtoSub: data.logtoSub },
       });
 
-      if (existingUser && existingUser.role === 'SALON_DIRECTOR' && !isDirector && !existingUser.email.endsWith('@lume.salon')) {
+      if (
+        existingUser &&
+        existingUser.role === 'SALON_DIRECTOR' &&
+        !isDirector &&
+        !existingUser.email.endsWith('@lume.salon')
+      ) {
         updateData.role = 'CLIENT';
         updateData.specialization = null;
       }
@@ -46,22 +76,18 @@ export class AuthController {
         create: {
           logtoSub: data.logtoSub,
           email,
-          name: data.name ?? (defaultRole === 'SALON_DIRECTOR' ? 'Sarah Mitchell' : 'Lumé Client'),
+          name: data.name ?? (defaultRole === 'SALON_DIRECTOR' ? DEFAULT_DIRECTOR_NAME : DEFAULT_CLIENT_NAME),
           role: defaultRole,
           specialization: defaultRole === 'SALON_DIRECTOR' ? 'Salon Director' : null,
-          avatarUrl: data.picture ?? (defaultRole === 'SALON_DIRECTOR'
-            ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80'
-            : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'),
+          avatarUrl:
+            data.picture ??
+            (defaultRole === 'SALON_DIRECTOR' ? DEFAULT_DIRECTOR_AVATAR : DEFAULT_CLIENT_AVATAR),
         },
       });
 
       res.json({ user });
     } catch (err: unknown) {
-      if (err instanceof z.ZodError) {
-        res.status(400).json({ error: 'VALIDATION_ERROR', details: err.issues });
-        return;
-      }
-      res.status(500).json({ error: 'FAILED_TO_SYNC_USER' });
+      next(err);
     }
   }
 }

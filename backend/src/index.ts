@@ -8,6 +8,8 @@ import authRoutes from './modules/auth/auth.routes';
 import clientsRoutes from './modules/clients/clients.routes';
 import { BookingsController } from './modules/bookings/bookings.controller';
 
+import { errorHandler } from './middlewares/errorHandler';
+
 dotenv.config();
 
 const app = express();
@@ -31,6 +33,7 @@ apiRouter.use('/clients', clientsRoutes);
 
 app.use('/api', apiRouter);
 app.use('/', apiRouter);
+app.use(errorHandler);
 
 if (!process.env.VERCEL) {
   app.listen(port, () => {

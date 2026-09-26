@@ -1,8 +1,8 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/prisma';
 
 export class ClientsController {
-  static async getAll(_req: Request, res: Response): Promise<void> {
+  static async getAll(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const clients = await prisma.user.findMany({
         where: { role: 'CLIENT' },
@@ -20,8 +20,8 @@ export class ClientsController {
         orderBy: { createdAt: 'desc' },
       });
       res.json(clients);
-    } catch {
-      res.status(500).json({ error: 'FAILED_TO_FETCH_CLIENTS' });
+    } catch (err: unknown) {
+      next(err);
     }
   }
 }
