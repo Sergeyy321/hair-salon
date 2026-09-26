@@ -4,5 +4,5 @@ build
 .env
 .env.local
 .vite
-
+package-lock.json
 /src/generated/prisma
