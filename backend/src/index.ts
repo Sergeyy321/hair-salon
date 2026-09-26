@@ -16,19 +16,26 @@ const port = Number(process.env.PORT) || 5000;
 app.use(cors());
 app.use(express.json());
 
-app.get('/health', (_req, res) => {
+const apiRouter = express.Router();
+
+apiRouter.get('/health', (_req, res) => {
   res.json({ status: 'ok', atelier: 'Lumé', time: new Date().toISOString() });
 });
 
-app.get('/api/my-bookings', BookingsController.getMyBookings);
-app.use('/api/services', servicesRoutes);
-app.use('/api/bookings', bookingsRoutes);
-app.use('/api/barbers', barbersRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/clients', clientsRoutes);
+apiRouter.get('/my-bookings', BookingsController.getMyBookings);
+apiRouter.use('/services', servicesRoutes);
+apiRouter.use('/bookings', bookingsRoutes);
+apiRouter.use('/barbers', barbersRoutes);
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/clients', clientsRoutes);
 
-app.listen(port, () => {
-  process.stdout.write(` server running on port ${port}\n`);
-});
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
+
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    process.stdout.write(` server running on port ${port}\n`);
+  });
+}
 
 export default app;
